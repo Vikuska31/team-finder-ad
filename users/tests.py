@@ -1,13 +1,34 @@
 import shutil
 import tempfile
+from http import HTTPStatus
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from projects.models import Project
+from users.constants import (
+    FILTER_FAVORITE_OWNERS,
+    FILTER_INTERESTED_USERS,
+)
 from users.models import User
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp()
+
+ANNA_EMAIL = "anna@example.com"
+ANNA_NAME = "Анна"
+ANNA_SURNAME = "Иванова"
+IVAN_EMAIL = "ivan@example.com"
+IVAN_NAME = "Иван"
+IVAN_SURNAME = "Петров"
+MARIA_EMAIL = "maria@example.com"
+MARIA_NAME = "Мария"
+MARIA_SURNAME = "Сидорова"
+PASSWORD = "pass12345"
+WRONG_PASSWORD = "wrong"
+PROJECT_NAME = "Трекер"
+RAW_PHONE = "89991234567"
+NORMALIZED_PHONE = "+79991234567"
+WRONG_GITHUB_URL = "https://example.com/anna"
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -17,10 +38,10 @@ class UserModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            email="anna@example.com",
-            name="Анна",
-            surname="Иванова",
-            password="pass12345",
+            email=ANNA_EMAIL,
+            name=ANNA_NAME,
+            surname=ANNA_SURNAME,
+            password=PASSWORD,
         )
 
     def test_avatar_is_generated(self):
@@ -29,7 +50,7 @@ class UserModelTest(TestCase):
 
     def test_str(self):
         """В строковом виде пользователь — это имя и фамилия."""
-        self.assertEqual(str(self.user), "Анна Иванова")
+        self.assertEqual(str(self.user), f"{ANNA_NAME} {ANNA_SURNAME}")
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -41,28 +62,28 @@ class AuthTest(TestCase):
         response = self.client.post(
             reverse("users:register"),
             {
-                "name": "Иван",
-                "surname": "Петров",
-                "email": "ivan@example.com",
-                "password": "pass12345",
+                "name": IVAN_NAME,
+                "surname": IVAN_SURNAME,
+                "email": IVAN_EMAIL,
+                "password": PASSWORD,
             },
         )
         self.assertRedirects(response, reverse("projects:list"))
-        self.assertTrue(User.objects.filter(email="ivan@example.com").exists())
+        self.assertTrue(User.objects.filter(email=IVAN_EMAIL).exists())
 
     def test_login_with_wrong_password(self):
         """При неверном пароле вход не выполняется."""
         User.objects.create_user(
-            email="maria@example.com",
-            name="Мария",
-            surname="Сидорова",
-            password="pass12345",
+            email=MARIA_EMAIL,
+            name=MARIA_NAME,
+            surname=MARIA_SURNAME,
+            password=PASSWORD,
         )
         response = self.client.post(
             reverse("users:login"),
-            {"email": "maria@example.com", "password": "wrong"},
+            {"email": MARIA_EMAIL, "password": WRONG_PASSWORD},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertFalse(response.context["user"].is_authenticated)
 
 
@@ -73,10 +94,10 @@ class ProfileFormTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            email="anna@example.com",
-            name="Анна",
-            surname="Иванова",
-            password="pass12345",
+            email=ANNA_EMAIL,
+            name=ANNA_NAME,
+            surname=ANNA_SURNAME,
+            password=PASSWORD,
         )
 
     def setUp(self):
@@ -87,26 +108,26 @@ class ProfileFormTest(TestCase):
         self.client.post(
             reverse("users:edit_profile"),
             {
-                "name": "Анна",
-                "surname": "Иванова",
+                "name": ANNA_NAME,
+                "surname": ANNA_SURNAME,
                 "about": "",
-                "phone": "89991234567",
+                "phone": RAW_PHONE,
                 "github_url": "",
             },
         )
         self.user.refresh_from_db()
-        self.assertEqual(self.user.phone, "+79991234567")
+        self.assertEqual(self.user.phone, NORMALIZED_PHONE)
 
     def test_invalid_github_url(self):
         """Ссылка не на GitHub не сохраняется."""
         self.client.post(
             reverse("users:edit_profile"),
             {
-                "name": "Анна",
-                "surname": "Иванова",
+                "name": ANNA_NAME,
+                "surname": ANNA_SURNAME,
                 "about": "",
                 "phone": "",
-                "github_url": "https://example.com/anna",
+                "github_url": WRONG_GITHUB_URL,
             },
         )
         self.user.refresh_from_db()
@@ -120,18 +141,18 @@ class ParticipantsFilterTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.anna = User.objects.create_user(
-            email="anna@example.com",
-            name="Анна",
-            surname="Иванова",
-            password="pass12345",
+            email=ANNA_EMAIL,
+            name=ANNA_NAME,
+            surname=ANNA_SURNAME,
+            password=PASSWORD,
         )
         cls.ivan = User.objects.create_user(
-            email="ivan@example.com",
-            name="Иван",
-            surname="Петров",
-            password="pass12345",
+            email=IVAN_EMAIL,
+            name=IVAN_NAME,
+            surname=IVAN_SURNAME,
+            password=PASSWORD,
         )
-        cls.project = Project.objects.create(name="Трекер", owner=cls.ivan)
+        cls.project = Project.objects.create(name=PROJECT_NAME, owner=cls.ivan)
         cls.anna.favorites.add(cls.project)
 
     def test_owners_of_favorite_projects(self):
@@ -139,7 +160,7 @@ class ParticipantsFilterTest(TestCase):
         self.client.force_login(self.anna)
         response = self.client.get(
             reverse("users:list"),
-            {"filter": "owners-of-favorite-projects"},
+            {"filter": FILTER_FAVORITE_OWNERS},
         )
         self.assertEqual(list(response.context["page_obj"]), [self.ivan])
 
@@ -148,7 +169,7 @@ class ParticipantsFilterTest(TestCase):
         self.client.force_login(self.ivan)
         response = self.client.get(
             reverse("users:list"),
-            {"filter": "interested-in-my-projects"},
+            {"filter": FILTER_INTERESTED_USERS},
         )
         self.assertEqual(list(response.context["page_obj"]), [self.anna])
 
@@ -156,7 +177,7 @@ class ParticipantsFilterTest(TestCase):
         """Гостю фильтр не применяется, виден весь список."""
         response = self.client.get(
             reverse("users:list"),
-            {"filter": "owners-of-favorite-projects"},
+            {"filter": FILTER_FAVORITE_OWNERS},
         )
         self.assertEqual(len(response.context["page_obj"]), 2)
 

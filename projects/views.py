@@ -81,7 +81,7 @@ def toggle_participate(request, project_id):
     project = Project.objects.filter(id=project_id).first()
     if project is None:
         return not_found()
-    participant = request.user not in project.participants.all()
+    participant = not project.participants.filter(pk=request.user.pk).exists()
     if participant:
         project.participants.add(request.user)
     else:
@@ -95,7 +95,7 @@ def toggle_favorite(request, project_id):
     project = Project.objects.filter(id=project_id).first()
     if project is None:
         return not_found()
-    favorited = project not in request.user.favorites.all()
+    favorited = not request.user.favorites.filter(pk=project.pk).exists()
     if favorited:
         request.user.favorites.add(project)
     else:

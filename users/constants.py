@@ -16,3 +16,8 @@ AVATAR_COLORS = (
 
 PARTICIPANTS_PER_PAGE = 12
 PHONE_PATTERN = r"^(8|\+7)\d{10}$"
+
+FILTER_FAVORITE_OWNERS = "owners-of-favorite-projects"
+FILTER_PARTICIPATING_OWNERS = "owners-of-participating-projects"
+FILTER_INTERESTED_USERS = "interested-in-my-projects"
+FILTER_MY_PARTICIPANTS = "participants-of-my-projects"

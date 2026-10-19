@@ -9,7 +9,13 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.shortcuts import get_object_or_404, redirect, render
 
 from team_finder.utils import get_page
-from users.constants import PARTICIPANTS_PER_PAGE
+from users.constants import (
+    FILTER_FAVORITE_OWNERS,
+    FILTER_INTERESTED_USERS,
+    FILTER_MY_PARTICIPANTS,
+    FILTER_PARTICIPATING_OWNERS,
+    PARTICIPANTS_PER_PAGE,
+)
 from users.forms import LoginForm, ProfileForm, RegistrationForm
 from users.models import User
 
@@ -64,13 +70,13 @@ def participants(request):
     active_filter = ""
     if request.user.is_authenticated:
         active_filter = request.GET.get("filter", "")
-    if active_filter == "owners-of-favorite-projects":
+    if active_filter == FILTER_FAVORITE_OWNERS:
         users = users.filter(owned_projects__interested_users=request.user)
-    elif active_filter == "owners-of-participating-projects":
+    elif active_filter == FILTER_PARTICIPATING_OWNERS:
         users = users.filter(owned_projects__participants=request.user)
-    elif active_filter == "interested-in-my-projects":
+    elif active_filter == FILTER_INTERESTED_USERS:
         users = users.filter(favorites__owner=request.user)
-    elif active_filter == "participants-of-my-projects":
+    elif active_filter == FILTER_MY_PARTICIPANTS:
         users = users.filter(participated_projects__owner=request.user)
     users = users.distinct().order_by("id")
     return render(

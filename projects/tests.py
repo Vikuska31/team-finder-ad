@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+from http import HTTPStatus
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -9,6 +10,19 @@ from users.models import User
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp()
 
+OWNER_EMAIL = "anna@example.com"
+OWNER_NAME = "Анна"
+OWNER_SURNAME = "Иванова"
+GUEST_EMAIL = "ivan@example.com"
+GUEST_NAME = "Иван"
+GUEST_SURNAME = "Петров"
+PASSWORD = "pass12345"
+OLD_PROJECT_NAME = "Старый"
+NEW_PROJECT_NAME = "Новый"
+PROJECT_NAME = "Трекер"
+CREATED_PROJECT_NAME = "Карта прогулок"
+PROJECT_DESCRIPTION = "Описание"
+
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class ProjectListTest(TestCase):
@@ -17,13 +31,13 @@ class ProjectListTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            email="anna@example.com",
-            name="Анна",
-            surname="Иванова",
-            password="pass12345",
+            email=OWNER_EMAIL,
+            name=OWNER_NAME,
+            surname=OWNER_SURNAME,
+            password=PASSWORD,
         )
-        cls.old = Project.objects.create(name="Старый", owner=cls.user)
-        cls.new = Project.objects.create(name="Новый", owner=cls.user)
+        cls.old = Project.objects.create(name=OLD_PROJECT_NAME, owner=cls.user)
+        cls.new = Project.objects.create(name=NEW_PROJECT_NAME, owner=cls.user)
 
     def test_root_redirects_to_list(self):
         """Корневой адрес ведёт на список проектов."""
@@ -46,10 +60,10 @@ class ProjectCreateTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            email="anna@example.com",
-            name="Анна",
-            surname="Иванова",
-            password="pass12345",
+            email=OWNER_EMAIL,
+            name=OWNER_NAME,
+            surname=OWNER_SURNAME,
+            password=PASSWORD,
         )
 
     def test_author_becomes_participant(self):
@@ -58,20 +72,20 @@ class ProjectCreateTest(TestCase):
         self.client.post(
             reverse("projects:create"),
             {
-                "name": "Карта прогулок",
-                "description": "Описание",
+                "name": CREATED_PROJECT_NAME,
+                "description": PROJECT_DESCRIPTION,
                 "github_url": "",
                 "status": Project.Status.OPEN,
             },
         )
-        project = Project.objects.get(name="Карта прогулок")
+        project = Project.objects.get(name=CREATED_PROJECT_NAME)
         self.assertEqual(project.owner, self.user)
         self.assertIn(self.user, project.participants.all())
 
     def test_guest_cannot_create(self):
         """Гостя форма создания отправляет на страницу входа."""
         response = self.client.get(reverse("projects:create"))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -81,18 +95,20 @@ class ProjectActionsTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.owner = User.objects.create_user(
-            email="anna@example.com",
-            name="Анна",
-            surname="Иванова",
-            password="pass12345",
+            email=OWNER_EMAIL,
+            name=OWNER_NAME,
+            surname=OWNER_SURNAME,
+            password=PASSWORD,
         )
         cls.guest = User.objects.create_user(
-            email="ivan@example.com",
-            name="Иван",
-            surname="Петров",
-            password="pass12345",
+            email=GUEST_EMAIL,
+            name=GUEST_NAME,
+            surname=GUEST_SURNAME,
+            password=PASSWORD,
         )
-        cls.project = Project.objects.create(name="Трекер", owner=cls.owner)
+        cls.project = Project.objects.create(
+            name=PROJECT_NAME, owner=cls.owner
+        )
 
     def test_owner_completes_project(self):
         """Автор закрывает проект, статус меняется на closed."""
@@ -144,7 +160,7 @@ class ProjectActionsTest(TestCase):
     def test_guest_cannot_open_favorites(self):
         """Гостя страница избранного отправляет на вход."""
         response = self.client.get(reverse("projects:favorites"))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
 
 def tearDownModule():
