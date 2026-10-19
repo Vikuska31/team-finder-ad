@@ -2,11 +2,7 @@ import random
 import uuid
 from io import BytesIO
 
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    BaseUserManager,
-    PermissionsMixin,
-)
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core.files.base import ContentFile
 from django.db import models
 from PIL import Image, ImageDraw, ImageFont
@@ -22,35 +18,12 @@ from users.constants import (
     PHONE_MAX_LENGTH,
     SURNAME_MAX_LENGTH,
 )
-
-
-class UserManager(BaseUserManager):
-    def create_user(self, email, name, surname, password=None, **extra_fields):
-        if not email:
-            raise ValueError("Email обязателен")
-        user = self.model(
-            email=self.normalize_email(email),
-            name=name,
-            surname=surname,
-            **extra_fields,
-        )
-        user.set_password(password)
-        user.save()
-        return user
-
-    def create_superuser(
-        self, email, name, surname, password=None, **extra_fields
-    ):
-        extra_fields["is_staff"] = True
-        extra_fields["is_superuser"] = True
-        return self.create_user(email, name, surname, password, **extra_fields)
+from users.managers import UserManager
 
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(
-        "Email",
-        max_length=EMAIL_MAX_LENGTH,
-        unique=True
+        "Email", max_length=EMAIL_MAX_LENGTH, unique=True
     )
     name = models.CharField("Имя", max_length=NAME_MAX_LENGTH)
     surname = models.CharField("Фамилия", max_length=SURNAME_MAX_LENGTH)

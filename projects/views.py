@@ -2,7 +2,6 @@ from http import HTTPStatus
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -10,16 +9,26 @@ from django.views.decorators.http import require_POST
 from projects.constants import PROJECTS_PER_PAGE
 from projects.forms import ProjectForm
 from projects.models import Project
+from team_finder.utils import get_page
+
+
+def not_found():
+    """Ответ в JSON для эндпоинтов, когда проекта нет в базе."""
+    return JsonResponse(
+        {"status": "error", "error": "Проект не найден"},
+        status=HTTPStatus.NOT_FOUND,
+    )
 
 
 def project_list(request):
     projects = Project.objects.select_related("owner")
-    paginator = Paginator(projects, PROJECTS_PER_PAGE)
-    page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "projects/project_list.html",
-        {"projects": projects, "page_obj": page_obj},
+        {
+            "projects": projects,
+            "page_obj": get_page(request, projects, PROJECTS_PER_PAGE),
+        },
     )
 
 
@@ -56,7 +65,9 @@ def project_form(request, project_id=None):
 @login_required
 @require_POST
 def complete(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
+    project = Project.objects.filter(id=project_id).first()
+    if project is None:
+        return not_found()
     if project.owner != request.user or project.status != Project.Status.OPEN:
         return JsonResponse({"status": "error"}, status=HTTPStatus.BAD_REQUEST)
     project.status = Project.Status.CLOSED
@@ -67,7 +78,9 @@ def complete(request, project_id):
 @login_required
 @require_POST
 def toggle_participate(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
+    project = Project.objects.filter(id=project_id).first()
+    if project is None:
+        return not_found()
     participant = request.user not in project.participants.all()
     if participant:
         project.participants.add(request.user)
@@ -79,7 +92,9 @@ def toggle_participate(request, project_id):
 @login_required
 @require_POST
 def toggle_favorite(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
+    project = Project.objects.filter(id=project_id).first()
+    if project is None:
+        return not_found()
     favorited = project not in request.user.favorites.all()
     if favorited:
         request.user.favorites.add(project)

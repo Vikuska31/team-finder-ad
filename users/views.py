@@ -6,9 +6,9 @@ from django.contrib.auth import (
 )
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
-from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
+from team_finder.utils import get_page
 from users.constants import PARTICIPANTS_PER_PAGE
 from users.forms import LoginForm, ProfileForm, RegistrationForm
 from users.models import User
@@ -73,14 +73,12 @@ def participants(request):
     elif active_filter == "participants-of-my-projects":
         users = users.filter(participated_projects__owner=request.user)
     users = users.distinct().order_by("id")
-    paginator = Paginator(users, PARTICIPANTS_PER_PAGE)
-    page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "users/participants.html",
         {
             "participants": users,
-            "page_obj": page_obj,
+            "page_obj": get_page(request, users, PARTICIPANTS_PER_PAGE),
             "active_filter": active_filter,
             "query_prefix": (
                 f"filter={active_filter}&" if active_filter else ""
