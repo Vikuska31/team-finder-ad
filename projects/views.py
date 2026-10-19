@@ -21,7 +21,9 @@ def not_found():
 
 
 def project_list(request):
-    projects = Project.objects.select_related("owner")
+    projects = Project.objects.select_related("owner").prefetch_related(
+        "participants"
+    )
     return render(
         request,
         "projects/project_list.html",
@@ -33,7 +35,12 @@ def project_list(request):
 
 
 def project_detail(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
+    project = get_object_or_404(
+        Project.objects.select_related("owner").prefetch_related(
+            "participants"
+        ),
+        id=project_id,
+    )
     return render(
         request,
         "projects/project-details.html",
@@ -105,7 +112,9 @@ def toggle_favorite(request, project_id):
 
 @login_required
 def favorites(request):
-    projects = request.user.favorites.select_related("owner")
+    projects = request.user.favorites.select_related("owner").prefetch_related(
+        "participants"
+    )
     return render(
         request,
         "projects/favorite_projects.html",

@@ -2,7 +2,7 @@ import re
 
 from django import forms
 
-from users.constants import PHONE_PATTERN
+from users.constants import PHONE_DIGITS, PHONE_PATTERN, PHONE_PREFIX
 from users.models import User
 
 
@@ -39,4 +39,4 @@ class ProfileForm(forms.ModelForm):
             raise forms.ValidationError(
                 "Телефон должен быть в формате 8XXXXXXXXXX или +7XXXXXXXXXX."
             )
-        return f"+7{phone[-10:]}"
+        return f"{PHONE_PREFIX}{phone[-PHONE_DIGITS:]}"

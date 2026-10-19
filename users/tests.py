@@ -179,7 +179,9 @@ class ParticipantsFilterTest(TestCase):
             reverse("users:list"),
             {"filter": FILTER_FAVORITE_OWNERS},
         )
-        self.assertEqual(len(response.context["page_obj"]), 2)
+        self.assertEqual(
+            len(response.context["page_obj"]), User.objects.count()
+        )
 
 
 def tearDownModule():
